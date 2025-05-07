@@ -1,34 +1,27 @@
 from googleapiclient.errors import HttpError
 from utils import log_error
+import re
 
-def list_classroom_data(service):
+def list_classroom_data(service, semester, turma_type, saved_assignment_title=None):
     try:
         results = service.courses().list().execute()
         courses = results.get("courses", [])
-        pif_courses = [course for course in courses if "PIF" in course["name"]]
+        pif_courses = [
+            course for course in courses 
+            if semester in course["name"] and "PIF" in course["name"] and turma_type.upper() in course["name"].upper()
+        ]
 
         if not pif_courses:
-            print("Nenhuma turma de PIF encontrada.")
+            print(f"Nenhuma turma encontrada para {semester} {turma_type}.\n")
             return None, None, None, None, None
 
-        print("\nEscolha o semestre:")
-        for index, course in enumerate(pif_courses, start=1):
-            print(f"{index} - {course['name']}")
-        print(f"{len(pif_courses) + 1} - Sair")
+        classroom = pif_courses[0]  # Assume que só tem uma TURMA A ou B por semestre
+        classroom_id = classroom["id"]
+        classroom_name = classroom["name"]
 
-        choice = int(input("\nDigite o número da turma: ").strip())
-        if choice == len(pif_courses) + 1:
-            print("Saindo da seleção.")
-            return None, None, None, None, None
-        if 1 <= choice <= len(pif_courses):
-            classroom = pif_courses[choice - 1]
-            classroom_id = classroom["id"]
-            classroom_name = classroom["name"]
-        else:
-            print("Opção inválida.")
-            return None, None, None, None, None
+        print(f"\nTurma selecionada automaticamente: {classroom_name}\n")
 
-        print("\nBuscando listas de exercícios...")
+        print("Buscando listas de exercícios...\n")
         assignments = service.courses().courseWork().list(courseId=classroom_id).execute()
         course_work = assignments.get("courseWork", [])
 
@@ -37,26 +30,34 @@ def list_classroom_data(service):
         ]
 
         if not valid_assignments:
-            print("Nenhuma lista de exercícios encontrada.")
+            print("Nenhuma lista de exercícios encontrada.\n")
             return None, None, None, None, None
 
-        print("\nEscolha a lista de exercícios:")
-        for index, assignment in enumerate(valid_assignments):
-            print(f"{index} - {assignment['title']}")
-        print(f"{len(valid_assignments)} - Sair")
-
-        choice = int(input("\nDigite o número da lista: ").strip())
-        if choice == len(valid_assignments):
-            print("Saindo da seleção.")
-            return None, None, None, None, None
-        if 0 <= choice < len(valid_assignments):
-            selected = valid_assignments[choice]
-            coursework_id = selected["id"]
-            list_title = selected["title"]
-            list_name = list_title.split(" - ")[0] if " - " in list_title else list_title
+        # Se já temos uma lista salva, usa ela
+        if saved_assignment_title:
+            selected = next((a for a in valid_assignments if a["title"] == saved_assignment_title), None)
+            if not selected:
+                print(f"A lista '{saved_assignment_title}' não foi encontrada.\n")
+                return None, None, None, None, None
         else:
-            print("Opção inválida.")
-            return None, None, None, None, None
+            print("\nEscolha a lista de exercícios:")
+            for index, assignment in enumerate(valid_assignments):
+                print(f"{index} - {assignment['title']}")
+            print(f"{len(valid_assignments)} - Sair")
+
+            choice = int(input("\nDigite o número da lista: ").strip())
+            if choice == len(valid_assignments):
+                print("Saindo da seleção.\n")
+                return None, None, None, None, None
+            if 0 <= choice < len(valid_assignments):
+                selected = valid_assignments[choice]
+            else:
+                print("Opção inválida.\n")
+                return None, None, None, None, None
+
+        coursework_id = selected["id"]
+        list_title = selected["title"]
+        list_name = list_title.split(" - ")[0] if " - " in list_title else list_title
 
         return classroom_id, coursework_id, classroom_name, list_name, list_title
 

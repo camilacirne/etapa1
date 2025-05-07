@@ -1,4 +1,5 @@
 import os
+import re
 from datetime import datetime
 
 def read_id_from_file(filename):
@@ -11,6 +12,12 @@ def read_id_from_file(filename):
     except Exception as e:
         log_error(f"Erro ao ler '{filename}': {e}")
         return None
+
+def format_list_title(list_title):
+    match = re.search(r'LISTA\s*(\d+)', list_title.upper())
+    if match:
+        return f"lista{match.group(1).zfill(2)}"
+    return "lista"
 
 def extract_prefix(email):
     try:
