@@ -15,7 +15,7 @@ def list_classroom_data(service, semester, turma_type, saved_assignment_title=No
             print(f"Nenhuma turma encontrada para {semester} {turma_type}.\n")
             return None, None, None, None, None
 
-        classroom = pif_courses[0]  # Assume que só tem uma TURMA A ou B por semestre
+        classroom = pif_courses[0]  
         classroom_id = classroom["id"]
         classroom_name = classroom["name"]
 
@@ -29,11 +29,12 @@ def list_classroom_data(service, semester, turma_type, saved_assignment_title=No
             a for a in course_work if any(k in a["title"].upper() for k in ["LISTA", "LISTAS"])
         ]
 
+        valid_assignments = valid_assignments[::-1]
+
         if not valid_assignments:
             print("Nenhuma lista de exercícios encontrada.\n")
             return None, None, None, None, None
 
-        # Se já temos uma lista salva, usa ela
         if saved_assignment_title:
             selected = next((a for a in valid_assignments if a["title"] == saved_assignment_title), None)
             if not selected:

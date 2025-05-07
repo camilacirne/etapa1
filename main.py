@@ -2,13 +2,15 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 from StudentSubmission import StudentSubmission, save_students_to_txt, load_students_from_txt
-from file_renamer import integrate_renaming
+from file_renamer import rename_files, integrate_renaming
 from submission_handler import download_submissions, organize_extracted_files, move_non_zip_files, if_there_is_a_folder_inside, delete_subfolders_in_student_folders, remove_empty_folders
 from utils import log_error, format_list_title, read_id_from_file
 from google_auth_utils import get_credentials, get_gspread_client
-from spreadsheet_handler import (create_or_get_google_sheet_in_folder, header_worksheet, insert_header_title, freeze_and_sort, fill_worksheet_with_students)
 from classroom_utils import list_classroom_data
 from sheet_id_handler import  list_informations, list_questions
+from ListMetadata import ListMetadata, save_metadata_to_json, load_metadata_from_json
+from folders_organizer import (organize_extracted_files, move_non_zip_files, if_there_is_a_folder_inside, delete_subfolders_in_student_folders, remove_empty_folders)
+from dataclasses import dataclass, asdict, is_dataclass
 import re
 import os
 import shutil
@@ -59,25 +61,44 @@ def main():
             except Exception as e:
                 print(f"Erro ao carregar dados da planilha: {e}")
                 return
+            
 
             formatted_class = f"turma{class_letter}"
             download_folder = os.path.join("Downloads", f"download_{formatted_class}_{formatted_list}")
             turma_folders.append(f"download_{formatted_class}_{formatted_list}")
             os.makedirs(download_folder, exist_ok=True)
+            metadata = ListMetadata(
+                class_name=classroom_name,
+                list_name=list_title,
+                num_questions=num_questions,
+                score=score
+            )
 
+            metadata_filename = f"metadata_turma{class_letter.upper()}.json"
+            metadata_path = os.path.join("Downloads", metadata_filename)
+            save_metadata_to_json(metadata, metadata_path)
+            
             submissions = classroom_service.courses().courseWork().studentSubmissions().list(
                 courseId=classroom_id, courseWorkId=coursework_id).execute()
 
             student_list = download_submissions(classroom_service, drive_service, submissions, download_folder, classroom_id, coursework_id)
+            print("\n\nDownload completo. Arquivos salvos em:", os.path.abspath(download_folder))
+            students_filename = f"students_turma{class_letter.upper()}.json"
+            students_path = os.path.join("Downloads", students_filename)
+            save_students_to_txt(student_list, students_path)
 
-            save_students_to_txt(student_list, os.path.join(download_folder, "students.json"))
-
-            organize_extracted_files(download_folder)
+            organize_extracted_files(download_folder, student_list)
             move_non_zip_files(download_folder)
-            submissions_folder = os.path.join(download_folder, 'submissions')
-            if_there_is_a_folder_inside(submissions_folder)
-            delete_subfolders_in_student_folders(submissions_folder)
-            remove_empty_folders(submissions_folder)
+            student_folder = os.path.join(download_folder, 'submissions')
+            if_there_is_a_folder_inside(student_list, student_folder)
+            delete_subfolders_in_student_folders(student_folder)
+            remove_empty_folders(student_folder)            
+            save_students_to_txt(student_list, students_path)
+            print("\nProcesso de extrair e organizar pastas finalizado. Arquivos salvos em:", os.path.abspath(student_folder))
+
+            rename_files(student_folder, list_title, questions_data, student_list)
+            save_students_to_txt(student_list, students_path)
+            print("\nProcesso de verificar e renomear arquivos finalizado.")
 
         # Integrar renomeação e salvar students_final.json
         integrate_renaming(turma_folders, list_title, questions_data)
@@ -94,21 +115,6 @@ def main():
                 src_path = os.path.join(src, student)
                 dst_path = os.path.join(final_submissions_folder, student)
                 shutil.move(src_path, dst_path)
-
-        folder_id = read_id_from_file("folder_id.txt")
-        if not folder_id:
-            print("Arquivo 'folder_id.txt' não encontrado ou inválido.\n")
-            return
-
-        worksheet = create_or_get_google_sheet_in_folder("PIF", list_name, folder_id)
-        header_worksheet(worksheet, num_questions, score)
-
-        for student in final_students:
-            worksheet.append_rows([student.to_list(num_questions)])
-
-        freeze_and_sort(worksheet)
-        insert_header_title(worksheet, "PIF", list_title)
-        print("\nProcesso finalizado com sucesso.\n")
 
     except Exception as e:
         log_error(f"Erro no fluxo principal: {e}")

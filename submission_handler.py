@@ -58,6 +58,11 @@ def handle_attachment(file_id, file_name, student_folder, student_obj, drive_ser
             student_obj.update_field('entregou', 1)
             student_obj.add_comment("Erro de submissão: enviou arquivo(s), mas não enviou numa pasta compactada.")
 
+            student_folder = create_student_folder_if_needed(download_folder, student_login)
+            new_path = os.path.join(student_folder, file_name)
+            shutil.move(file_path, new_path)
+            file_path = new_path 
+
         rename_file_if_needed(file_name, student_folder, student_obj)
 
     except HttpError as error:
@@ -114,12 +119,10 @@ def download_submissions(classroom_service, drive_service, submissions, download
                     if due_date and submission_date:
                         student_obj.update_field('atrasou', calculate_delay(due_date, submission_date))
 
-                    student_folder = create_student_folder_if_needed(download_folder, student_login)
-
                     for attachment in attachments:
                         file_id = attachment.get('driveFile', {}).get('id')
                         file_name = attachment.get('driveFile', {}).get('title')
-                        handle_attachment(file_id, file_name, student_folder, student_obj, drive_service)
+                        handle_attachment(file_id, file_name, download_folder, student_obj, drive_service)
 
             except Exception as e:
                 log_error(f"Erro ao processar submissão de aluno: {e}")

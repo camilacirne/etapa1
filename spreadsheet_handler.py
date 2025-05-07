@@ -136,6 +136,55 @@ def freeze_and_sort(worksheet):
     except Exception as e:
         log_error(f"Erro ao aplicar congelamento e ordenação: {e}")
 
+def apply_dynamic_formula_in_column(worksheet, num_questions):
+    try:
+        data = worksheet.get_all_values()
+        requests = []
+
+        last_filled_row = 0
+        for row_idx, row in enumerate(data):
+            if row[0]:  
+                last_filled_row = row_idx
+
+        column_final_grades = 7 + num_questions
+
+        columns_to_sum = ['D', 'E', 'F', 'G'][:num_questions]
+        col_delay = chr(ord('E') + num_questions)
+        col_form = chr(ord('F') + num_questions)
+        col_copy = chr(ord('G') + num_questions)
+
+        for row_idx in range(1, last_filled_row + 1):
+            try:
+                sum_formula = '+'.join([f"{col}{row_idx + 1}" for col in columns_to_sum])
+                
+                formula = f"=({sum_formula}) * (1 - (0.15*{col_delay}{row_idx + 1}) - (0.15*{col_form}{row_idx + 1}))*(1 - {col_copy}{row_idx+1})"
+
+                requests.append({
+                    'updateCells': {
+                        'rows': [{
+                            'values': [{'userEnteredValue': {'formulaValue': formula}}]
+                        }],
+                        'fields': 'userEnteredValue',
+                        'start': {
+                            'sheetId': worksheet.id,
+                            'rowIndex': row_idx,
+                            'columnIndex': column_final_grades 
+                        }
+                    }
+                })
+
+            except Exception as e:
+                log_error(f"Erro ao processar a linha {row_idx + 1}: {e}")
+                continue
+
+        body = {
+            'requests': requests
+        }
+        worksheet.spreadsheet.batch_update(body)
+
+    except Exception as e:
+        log_error(f"Erro ao aplicar formula dinâmica: {e}")
+
 def fill_worksheet_with_students(worksheet, students, num_questions):
     try:
         if not students:
@@ -147,3 +196,4 @@ def fill_worksheet_with_students(worksheet, students, num_questions):
         log_info(f"{len(rows)} alunos inseridos na planilha com sucesso.")
     except Exception as e:
         log_error(f"Erro ao preencher a planilha com alunos: {e}")
+
