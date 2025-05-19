@@ -3,34 +3,46 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from utils import log_error, log_info
 from google_auth_utils import get_gspread_client
+from google_auth_utils import get_credentials
 
-def create_or_get_google_sheet_in_folder(course_name, list_name, folder_id):
+def create_or_get_google_sheet_in_folder(classroom_name, list_name, folder_id):
     try:
         client = get_gspread_client()
-        spreadsheet_title = f"{course_name} - {list_name}"
+        drive_service = build("drive", "v3", credentials=get_credentials())
 
-        # Verifica se já existe
-        drive_service = build("drive", "v3", credentials=client.auth.credentials)
-        query = f"mimeType='application/vnd.google-apps.spreadsheet' and trashed = false and '{folder_id}' in parents"
-        response = drive_service.files().list(q=query, fields="files(id, name)").execute()
+        query = f"'{folder_id}' in parents and mimeType='application/vnd.google-apps.spreadsheet' and name='{classroom_name}' and trashed=false"
+        response = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
 
-        for file in response.get("files", []):
-            if file["name"] == spreadsheet_title:
-                spreadsheet = client.open_by_key(file["id"])
-                try:
-                    return spreadsheet.worksheet(list_name)
-                except gspread.exceptions.WorksheetNotFound:
-                    return spreadsheet.add_worksheet(title=list_name, rows="100", cols="20")
+        if response['files']:
+            spreadsheet_id = response['files'][0]['id']
+            spreadsheet = client.open_by_key(spreadsheet_id)
+            print(f"Planilha '{classroom_name}' já existe.\n")
 
-        # Criar nova planilha
-        spreadsheet = client.create(spreadsheet_title)
-        spreadsheet.share(None, perm_type='anyone', role='writer')
-        drive_service.files().update(fileId=spreadsheet.id, addParents=folder_id, removeParents='root').execute()
-        return spreadsheet.sheet1
+            try:
+                worksheet = spreadsheet.worksheet(list_name)
+                print(f"A aba '{list_name}' já existe na planilha.\n")
+                worksheet = None
+                return worksheet
+            except Exception:
+
+                worksheet = spreadsheet.add_worksheet(title=list_name, rows=100, cols=20)
+                print(f"A aba '{list_name}' foi criada na planilha '{classroom_name}'.\n")
+            
+            return worksheet
+        else:
+            spreadsheet = client.create(classroom_name)
+            print(f"Planilha '{classroom_name}' criada com sucesso.\n")
+
+            file_id = spreadsheet.id
+            drive_service.files().update(fileId=file_id, addParents=folder_id, removeParents='root').execute()
+
+            worksheet = spreadsheet.get_worksheet(0)
+            worksheet.update_title(list_name)
+            
+            return worksheet
 
     except Exception as e:
-        log_error(f"Erro ao criar ou buscar planilha: {e}")
-        return None
+        log_error(f"Erro ao criar ou verificar a planilha e aba: {str(e)}")
 
 def header_worksheet(worksheet, num_questions, score):
     try:

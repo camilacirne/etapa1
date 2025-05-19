@@ -16,7 +16,7 @@ def read_id_from_file(filename):
 def format_list_title(list_title):
     match = re.search(r'LISTA\s*(\d+)', list_title.upper())
     if match:
-        return f"lista{match.group(1).zfill(2)}"
+        return f"LISTA {match.group(1).zfill(2)}"
     return "lista"
 
 def extract_prefix(email):

@@ -1,3 +1,4 @@
+import re
 import gspread
 from gspread.exceptions import WorksheetNotFound
 from utils import log_error
@@ -8,9 +9,13 @@ def list_informations(sheet_id):
         client = get_gspread_client()
         spreadsheet = client.open_by_key(sheet_id)
 
-        semester = spreadsheet.title
+        semester = spreadsheet.title.strip()
+        
+        if not re.match(r"^\d{4}\.\d$", semester):
+            print(f"O título da planilha deve estar no formato 'YYYY.S' (ex: 2024.2). Encontrado: '{semester}'\n")
+            return None, None
+
         lists = [ws.title for ws in spreadsheet.worksheets()]
-    
         return semester, lists
 
     except WorksheetNotFound:

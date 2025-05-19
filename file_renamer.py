@@ -233,17 +233,28 @@ def rename_files(submissions_folder, list_title, questions_data, students):
 
 def integrate_renaming(turmas, list_title, questions_data):
     try:
-        all_students = []
+        for turma_path in turmas:
+            formatted_list_folder = os.path.dirname(turma_path)
+            class_name = os.path.basename(turma_path).replace("zips_", "") 
 
-        for turma in turmas:
-            path = os.path.join("Downloads", turma, "students.json")
-            students = load_students_from_txt(path)
-            submissions_path = os.path.join("Downloads", turma, "submissions")
+            students_filename = f"students_{class_name}.json"
+            students_path = os.path.join(formatted_list_folder, students_filename)
+            submissions_path = os.path.join(turma_path, f"submissions_{class_name}")
 
+            if not os.path.exists(students_path):
+                log_error(f"Arquivo de alunos não encontrado: {students_path}")
+                continue
+
+            if not os.path.exists(submissions_path):
+                log_error(f"Pasta de submissões não encontrada: {submissions_path}")
+                continue
+
+            students = load_students_from_txt(students_path)
             rename_files(submissions_path, list_title, questions_data, students)
-            save_students_to_txt(students, path)
-            all_students.extend(students)
+            save_students_to_txt(students, students_path)
 
         log_info("Renomeação e salvamento dos dados finais concluídos com sucesso.")
+
     except Exception as e:
         log_error(f"Erro ao integrar renomeação no main: {e}")
+

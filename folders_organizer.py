@@ -83,10 +83,10 @@ def rename_directory_if_needed(directory_path, expected_name, student_obj):
     except Exception as e:
         log_error(f"Erro ao renomear o diretório se necessário: {str(e)}")
 
-def organize_extracted_files(download_folder, students):
+def organize_extracted_files(download_folder, students, class_name):
     try:
-        submissions_folder = os.path.join(download_folder, 'submissions')
-        create_folder_if_not_exists(submissions_folder)
+        submissions_folder = os.path.join(download_folder, f"submissions_{class_name}")
+        os.makedirs(submissions_folder, exist_ok=True)
 
         for student in students:
             student_login = student.login
@@ -197,7 +197,6 @@ def organize_extracted_files(download_folder, students):
     except Exception as e:
         log_error(f"Erro ao organizar arquivos extraídos: {str(e)}")
 
-
 def if_there_is_a_folder_inside(students, submissions_folder):
     try:
         def move_files_to_inicial_folder(first_folder, folder_name, student):
@@ -257,18 +256,17 @@ def delete_subfolders_in_student_folders(submissions_folder):
     except Exception as e:
         log_error(f"Erro ao deletar pastas dentro das pastas dos estudantes: {str(e)}")
 
-def move_non_zip_files(download_folder):
+def move_non_zip_files(download_folder, class_name):
     try:
-        submissions_folder = os.path.join(download_folder, 'submissions')
+        submissions_folder = os.path.join(download_folder, f"submissions_{class_name}")
         for item in os.listdir(download_folder):
             item_path = os.path.join(download_folder, item)
-            if os.path.isdir(item_path) and item != 'submissions':
+            if os.path.isdir(item_path) and item != f"submissions_{class_name}":
                 destination_folder = os.path.join(submissions_folder, item)
                 if not os.path.exists(destination_folder):
                     os.rename(item_path, destination_folder)
     except Exception as e:
-        log_error(f"Erro ao mover arquivos que não estavão zipados {str(e)}")
-
+        log_error(f"Erro ao mover arquivos que não estavam zipados: {str(e)}")
 
 def remove_empty_folders(submissions_folder):
     try:
