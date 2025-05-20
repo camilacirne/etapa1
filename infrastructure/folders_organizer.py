@@ -218,7 +218,7 @@ def if_there_is_a_folder_inside(students, submissions_folder):
                         student.update_field('formatacao', 0)
                         student.add_comment(f"Erro de formatação de pasta: subpastas como {subfolder} foram movidas.")
                     
-                    move_files_to_inicial_folder(subfolder_path, folder_name)
+                    move_files_to_inicial_folder(subfolder_path, folder_name, student)
             
             files = [item for item in items if os.path.isfile(os.path.join(first_folder, item)) and not item.startswith('.')]
             for file in files:
