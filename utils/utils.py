@@ -7,7 +7,6 @@ def read_id_from_file(filename):
         with open(filename, 'r') as file:
             return file.read().strip()
     except FileNotFoundError:
-        log_info(f"Arquivo '{filename}' não encontrado.")
         return None
     except Exception as e:
         log_error(f"Erro ao ler '{filename}': {e}")
@@ -70,14 +69,20 @@ def get_submission_timestamp(submission, student_id):
 
 def log_error(message):
     try:
-        with open("error_log.txt", "a") as file:
+        os.makedirs("output", exist_ok=True)
+        log_path = os.path.join("output", "error_log.txt")
+        
+        with open(log_path, "a", encoding="utf-8") as file:
             file.write(f"{message}\n")
     except Exception:
         pass
 
 def log_info(message):
     try:
-        with open("output_log.txt", "a") as file:
+        os.makedirs("output", exist_ok=True)
+        log_path = os.path.join("output", "output_log.txt")
+
+        with open(log_path, "a", encoding="utf-8") as file:
             file.write(f"{message}\n")
     except Exception:
         log_error(f"Erro ao escrever log de info: {message}")

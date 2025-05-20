@@ -1,8 +1,8 @@
 import re
 import gspread
 from gspread.exceptions import WorksheetNotFound
-from utils import log_error
-from google_auth_utils import get_gspread_client
+from utils.utils import log_error
+from infrastructure.auth_google import get_gspread_client
 
 def list_informations(sheet_id):
     try:

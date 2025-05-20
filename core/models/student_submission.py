@@ -1,6 +1,6 @@
 from dataclasses import dataclass, asdict
 import json
-from utils import log_error, log_info
+from utils.utils import log_error, log_info
 
 @dataclass
 class StudentSubmission:

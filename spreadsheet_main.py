@@ -1,10 +1,10 @@
 import os
 from googleapiclient.discovery import build
-from google_auth_utils import get_credentials, get_gspread_client
-from spreadsheet_handler import (create_or_get_google_sheet_in_folder, header_worksheet, insert_header_title, freeze_and_sort, fill_worksheet_with_students)
-from StudentSubmission import load_students_from_txt
-from utils import log_error, log_info, read_id_from_file
-from ListMetadata import load_metadata_from_json
+from infrastructure.auth_google import get_credentials, get_gspread_client
+from infrastructure.spreadsheet_handler import (create_or_get_google_sheet_in_folder, header_worksheet, insert_header_title, freeze_and_sort, fill_worksheet_with_students)
+from core.models.student_submission import load_students_from_txt
+from utils.utils import log_error, log_info, read_id_from_file
+from core.models.list_metadata import load_metadata_from_json
 
 def main():
     try:
@@ -20,7 +20,7 @@ def main():
                 print("A pasta 'Downloads' não foi encontrada.")
                 return
 
-            folder_id = read_id_from_file("folder_id.txt")
+            folder_id = read_id_from_file(os.path.join("input", "folder_id.txt"))
             if not folder_id:
                 print("Arquivo 'folder_id.txt' não encontrado ou inválido.\n")
                 return

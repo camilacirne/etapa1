@@ -1,8 +1,14 @@
 # APP specific files
+input/folder_id.txt
+input/sheet_id.txt
+**/credentials.json
 credentials.json
+**/token.json
 token.json
-ErroFormatacao.txt
+output/check_rename.txt
+output/output_log.txt
 test_class.txt
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,12 +1,14 @@
 import os
 import re
 import shutil
-from utils import log_error, log_info
-from StudentSubmission import save_students_to_txt, load_students_from_txt
+from utils.utils import log_error, log_info
+from core.models.student_submission import save_students_to_txt, load_students_from_txt
 
 def verification_renamed(message):
     try:
-        with open("checkRename.txt", "a") as renamed_verification:
+        os.makedirs("output", exist_ok=True)  # garante que a pasta exista
+        file_path = os.path.join("output", "check_rename.txt")
+        with open(file_path, "a", encoding="utf-8") as renamed_verification:
             renamed_verification.write(f"{message}\n")
     except Exception as e:
         log_error(f"Não foi possível criar ou escrever no arquivo de verificação: {str(e)}")

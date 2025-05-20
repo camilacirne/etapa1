@@ -4,16 +4,15 @@ import shutil
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
-from StudentSubmission import StudentSubmission, save_students_to_txt, load_students_from_txt
-from file_renamer import rename_files, integrate_renaming
-from submission_handler import download_submissions
-from utils import log_error, format_list_title, read_id_from_file
-from google_auth_utils import get_credentials, get_gspread_client
-from classroom_utils import list_classroom_data
-from sheet_id_handler import  list_informations, list_questions
-from ListMetadata import ListMetadata, save_metadata_to_json, load_metadata_from_json
-from folders_organizer import (organize_extracted_files, move_non_zip_files, if_there_is_a_folder_inside, delete_subfolders_in_student_folders, remove_empty_folders)
-from dataclasses import dataclass, asdict, is_dataclass
+from core.models.student_submission import StudentSubmission, save_students_to_txt, load_students_from_txt
+from services.file_renamer import rename_files, integrate_renaming
+from infrastructure.submission_handler import download_submissions
+from utils.utils import log_error, format_list_title, read_id_from_file, log_info
+from infrastructure.auth_google import get_credentials, get_gspread_client
+from infrastructure.classroom_gateway import list_classroom_data
+from utils.sheet_id_handler import  list_informations, list_questions
+from core.models.list_metadata import ListMetadata, save_metadata_to_json, load_metadata_from_json
+from infrastructure.folders_organizer import (organize_extracted_files, move_non_zip_files, if_there_is_a_folder_inside, delete_subfolders_in_student_folders, remove_empty_folders)
 
 def main():
     try:
@@ -21,7 +20,7 @@ def main():
         classroom_service = build("classroom", "v1", credentials=creds)
         drive_service = build("drive", "v3", credentials=creds)
 
-        sheet_id = read_id_from_file("sheet_id.txt")
+        sheet_id = read_id_from_file(os.path.join("input", "sheet_id.txt"))
         if not sheet_id:
             print("Arquivo 'sheet_id.txt' não encontrado.\n")
             return
@@ -31,6 +30,9 @@ def main():
         list_name = list_title = None
         list_title_a = None
         turma_folders = []
+
+        formatted_list = None
+        script_dir = os.path.dirname(os.path.abspath(__file__))
 
         for class_letter in ["A", "B"]:
             turma_type = f"TURMA {class_letter}"
@@ -47,6 +49,10 @@ def main():
                 list_title_a = list_title
                 list_name_ref = list_name
                 formatted_list = format_list_title(list_name)
+                base_path = os.path.join(script_dir, "Downloads", formatted_list)
+                if os.path.exists(base_path):
+                    print(f"Já existe uma pasta de download para a lista '{formatted_list}', não é possível continuar.\n")
+                    return
             else:
                 if list_name != list_name_ref:
                     print("As duas turmas devem usar a mesma atividade.\n")
@@ -69,7 +75,6 @@ def main():
 
             os.makedirs(zips_folder, exist_ok=True)
 
-            # Salva apenas a pasta zips para o integrate_renaming
             turma_folders.append(zips_folder)
 
             metadata = ListMetadata(
@@ -86,8 +91,9 @@ def main():
             submissions = classroom_service.courses().courseWork().studentSubmissions().list(
                 courseId=classroom_id, courseWorkId=coursework_id).execute()
 
+            print(f"\nComeçando download da turma {class_letter} ...")
             student_list = download_submissions(classroom_service, drive_service, submissions, zips_folder, classroom_id, coursework_id)
-            print("\n\nDownload completo. Arquivos salvos em:", os.path.abspath(zips_folder))
+            print("\nDownload completo. Arquivos salvos em:", os.path.abspath(zips_folder))
 
             students_filename = f"students_turma{class_letter.upper()}.json"
             students_path = os.path.join(base_path, students_filename)
@@ -106,10 +112,8 @@ def main():
             save_students_to_txt(student_list, students_path)
             print("\nProcesso de verificação e renomeação finalizado.")
 
-        # Renomeia arquivos finais
         integrate_renaming(turma_folders, list_title, questions_data)
 
-        # Junta tudo em uma única pasta de submissões
         final_submissions_folder = os.path.join(script_dir, "Downloads", formatted_list, "submissions")
         os.makedirs(final_submissions_folder, exist_ok=True)
 
@@ -120,6 +124,9 @@ def main():
                 src_path = os.path.join(src_submission_path, student)
                 dst_path = os.path.join(final_submissions_folder, student)
                 shutil.move(src_path, dst_path)
+            
+            shutil.rmtree(src_submission_path)
+            log_info(f"Pasta deletada: {src_submission_path}")
 
         print("\nSubmissões unificadas em:", final_submissions_folder)
 

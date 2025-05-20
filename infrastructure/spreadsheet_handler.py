@@ -1,9 +1,9 @@
 import gspread
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-from utils import log_error, log_info
-from google_auth_utils import get_gspread_client
-from google_auth_utils import get_credentials
+from utils.utils import log_error, log_info
+from infrastructure.auth_google import get_gspread_client
+from infrastructure.auth_google import get_credentials
 
 def create_or_get_google_sheet_in_folder(classroom_name, list_name, folder_id):
     try:

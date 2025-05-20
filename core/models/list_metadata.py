@@ -1,7 +1,7 @@
 from dataclasses import dataclass, asdict
 import json
 import os
-from utils import log_error, log_info
+from utils.utils import log_error, log_info
 
 @dataclass
 class ListMetadata:

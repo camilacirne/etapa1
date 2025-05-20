@@ -2,8 +2,8 @@ import os
 import shutil
 import zipfile
 import rarfile
-from utils import log_info, log_error
-from StudentSubmission import StudentSubmission
+from utils.utils import log_info, log_error
+from core.models.student_submission import StudentSubmission
 
 def is_real_zip(file_path):
     try:
